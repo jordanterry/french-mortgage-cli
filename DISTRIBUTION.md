@@ -6,7 +6,7 @@ This guide explains how to package and distribute the French Property Investment
 
 - GitHub account
 - GitHub CLI (`gh`) installed
-- Gradle wrapper (included)
+- Python 3.8 or later
 
 ## Distribution Methods
 
@@ -34,36 +34,61 @@ This guide explains how to package and distribute the French Property Investment
    git push
    ```
 
-#### Release Process
+#### Automated Release Process
 
-1. **Build the JAR**:
+Use the included release script for a fully automated release:
+
+```bash
+./scripts/release.sh 2.0.0
+```
+
+This script automatically:
+1. Updates version in `version.properties`
+2. Runs Python tests
+3. Commits changes
+4. Creates and pushes git tag
+5. Creates GitHub release
+6. Downloads release tarball and calculates SHA256
+7. Updates Homebrew formula with correct SHA256
+8. Updates Homebrew tap repository
+
+#### Manual Release Process
+
+If you prefer manual control:
+
+1. **Run tests**:
    ```bash
-   ./gradlew clean shadowJar
+   python3 python/tests/test_french_mortgage.py
    ```
 
-2. **Update the formula** with version and SHA256:
-   ```bash
-   ./scripts/update-formula.sh 1.0.0
+2. **Update version** in `version.properties`:
+   ```
+   version=2.0.0
    ```
 
 3. **Create GitHub release**:
    ```bash
-   git tag v1.0.0
-   git push origin v1.0.0
+   git add version.properties
+   git commit -m "Release v2.0.0"
+   git tag v2.0.0
+   git push origin main v2.0.0
 
-   # Create release with JAR
-   gh release create v1.0.0 \
-     build/libs/french-property-investment.jar \
-     --title "v1.0.0" \
-     --notes "Initial release"
+   gh release create v2.0.0 --title "v2.0.0" --notes "Python release"
    ```
 
-4. **Update Homebrew tap** with the new formula:
+4. **Calculate SHA256** of tarball:
+   ```bash
+   curl -sL https://github.com/jordanterry/french-mortgage-cli/archive/refs/tags/v2.0.0.tar.gz | shasum -a 256
+   ```
+
+5. **Update Homebrew formula** with version and SHA256 in `Formula/french-property-investment.rb`
+
+6. **Update Homebrew tap**:
    ```bash
    cd ../homebrew-tap
-   cp ../french-property-investment/Formula/french-property-investment.rb Formula/
+   cp ../french-mortgage-cli/Formula/french-property-investment.rb Formula/
    git add Formula/
-   git commit -m "Update french-property-investment to v1.0.0"
+   git commit -m "Update french-property-investment to v2.0.0"
    git push
    ```
 
@@ -71,50 +96,52 @@ This guide explains how to package and distribute the French Property Investment
 
 Users can then install via:
 ```bash
-brew tap yourusername/tap
+brew tap jordanterry/tap
 brew install french-property-investment
 ```
 
-#### Automated Releases (Optional)
+---
 
-The included GitHub Actions workflow (`.github/workflows/release.yml`) automatically:
-- Builds the JAR when you push a tag
-- Creates a GitHub release
-- Uploads the JAR
-- Calculates SHA256
+### Method 2: Claude Code Skill
 
-To use:
-1. Push the workflow to your repo
-2. Create and push a tag: `git tag v1.0.0 && git push origin v1.0.0`
-3. GitHub Actions will handle the rest
+Distribute as a Claude Code skill for conversational property analysis:
+
+1. **Users clone/download the repository**:
+   ```bash
+   git clone https://github.com/jordanterry/french-mortgage-cli
+   cd french-mortgage-cli
+   ```
+
+2. **Run installation script**:
+   ```bash
+   ./skills/install.sh
+   ```
+
+This installs the skill to `~/.claude/skills/french-property-investment/` allowing users to analyze properties conversationally with Claude.
+
+Alternatively, users can manually download just the skill:
+```bash
+# Download skill files
+mkdir -p ~/.claude/skills/french-property-investment
+curl -o ~/.claude/skills/french-property-investment/french_mortgage.py \
+  https://raw.githubusercontent.com/jordanterry/french-mortgage-cli/main/skills/french-property-investment/french_mortgage.py
+curl -o ~/.claude/skills/french-property-investment/skill.json \
+  https://raw.githubusercontent.com/jordanterry/french-mortgage-cli/main/skills/french-property-investment/skill.json
+```
 
 ---
 
-### Method 2: Direct Download + Install Script
+### Method 3: Direct Python Script
 
-Users can install manually:
-
-```bash
-curl -fsSL https://raw.githubusercontent.com/yourusername/french-property-investment/main/scripts/install.sh | bash
-```
-
-Or with a specific version:
-```bash
-curl -fsSL https://raw.githubusercontent.com/yourusername/french-property-investment/main/scripts/install.sh | bash -s 1.0.0
-```
-
----
-
-### Method 3: GitHub Releases Only
-
-Users download the JAR directly:
+Users can download and run the Python script directly:
 
 ```bash
-# Download latest release
-gh release download --repo yourusername/french-property-investment --pattern "*.jar"
+# Download the script
+curl -o french_mortgage.py \
+  https://raw.githubusercontent.com/jordanterry/french-mortgage-cli/main/python/src/french_mortgage.py
 
-# Run directly
-java -jar french-property-investment.jar --help
+# Run it
+python3 french_mortgage.py --help
 ```
 
 ---
@@ -130,12 +157,10 @@ Follow [semver](https://semver.org/):
 
 ### Update Checklist
 
-- [ ] Update version in `build.gradle.kts` (if applicable)
-- [ ] Run tests: `./gradlew test`
-- [ ] Build JAR: `./gradlew shadowJar`
-- [ ] Update formula: `./scripts/update-formula.sh X.Y.Z`
-- [ ] Commit changes
-- [ ] Create and push tag: `git tag vX.Y.Z && git push origin vX.Y.Z`
+- [ ] Update version in `version.properties`
+- [ ] Run tests: `python3 python/tests/test_french_mortgage.py`
+- [ ] Run automated release: `./scripts/release.sh X.Y.Z` OR
+- [ ] Manual: Commit, tag, and update formula manually (see above)
 - [ ] Create GitHub release
 - [ ] Update Homebrew tap
 - [ ] Announce release

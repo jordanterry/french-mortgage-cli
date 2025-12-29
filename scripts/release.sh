@@ -8,7 +8,7 @@ cd "$PROJECT_DIR"
 
 VERSION_FILE="version.properties"
 FORMULA_FILE="Formula/french-property-investment.rb"
-JAR_PATH="build/libs/french-property-investment.jar"
+PYTHON_SCRIPT="python/src/french_mortgage.py"
 
 usage() {
     cat <<EOF
@@ -17,20 +17,20 @@ Usage: $0 <new-version>
 Automated release script for french-property-investment
 
 Arguments:
-  new-version    Semantic version (e.g., 1.0.1, 1.1.0, 2.0.0)
+  new-version    Semantic version (e.g., 2.0.0, 2.1.0, 3.0.0)
 
 Steps performed:
   1. Update version in version.properties
-  2. Build and test the project
-  3. Calculate SHA256 of JAR
+  2. Run Python tests
+  3. Calculate SHA256 of release tarball
   4. Update Homebrew formula
   5. Commit changes
   6. Create and push git tag
-  7. Create GitHub release with JAR
+  7. Create GitHub release
   8. Update Homebrew tap repository
 
 Example:
-  $0 1.0.1
+  $0 2.0.0
 
 EOF
     exit 1
@@ -65,25 +65,25 @@ echo "version=${NEW_VERSION}" > "$VERSION_FILE"
 echo "✓ Version updated to ${NEW_VERSION}"
 echo ""
 
-echo "Step 3: Building and testing..."
-JAVA_HOME=/opt/homebrew/opt/openjdk ./gradlew clean test shadowJar
-echo "✓ Build and tests passed"
-echo ""
-
-echo "Step 4: Calculating SHA256..."
-if [ ! -f "$JAR_PATH" ]; then
-    echo "Error: JAR not found at $JAR_PATH"
+echo "Step 3: Running Python tests..."
+if [ ! -f "$PYTHON_SCRIPT" ]; then
+    echo "Error: Python script not found at $PYTHON_SCRIPT"
     exit 1
 fi
-SHA256=$(shasum -a 256 "$JAR_PATH" | awk '{print $1}')
-echo "✓ SHA256: $SHA256"
+python3 python/tests/test_french_mortgage.py
+echo "✓ Tests passed"
 echo ""
 
-echo "Step 5: Updating Homebrew formula..."
+echo "Step 4: Calculating SHA256 of GitHub tarball..."
+TARBALL_URL="https://github.com/jordanterry/french-mortgage-cli/archive/refs/tags/v${NEW_VERSION}.tar.gz"
+echo "Note: SHA256 will need to be calculated after GitHub release is created"
+echo "The formula will be updated in step 10 after the release exists"
+echo ""
+
+echo "Step 5: Updating Homebrew formula version..."
 sed -i '' "s/version \".*\"/version \"${NEW_VERSION}\"/" "$FORMULA_FILE"
-sed -i '' "s|releases/download/v.*/french-property-investment.jar|releases/download/v${NEW_VERSION}/french-property-investment.jar|" "$FORMULA_FILE"
-sed -i '' "s/sha256 \".*\"/sha256 \"${SHA256}\"/" "$FORMULA_FILE"
-echo "✓ Formula updated"
+sed -i '' "s|archive/refs/tags/v.*.tar.gz|archive/refs/tags/v${NEW_VERSION}.tar.gz|" "$FORMULA_FILE"
+echo "✓ Formula version updated (SHA256 will be updated after release)"
 echo ""
 
 echo "Step 6: Committing changes..."
@@ -116,15 +116,14 @@ echo ""
 
 echo "Step 9: Creating GitHub release..."
 gh release create "v${NEW_VERSION}" \
-    "$JAR_PATH" \
     --title "v${NEW_VERSION}" \
     --notes "## Release v${NEW_VERSION}
 
-See the [CHANGELOG](https://github.com/jordanterry/french-mortgage-cli/blob/main/CHANGELOG.md) for details.
+Python-based French Property Investment Calculator
 
 ### Installation
 
-**Homebrew:**
+**Homebrew (recommended):**
 \`\`\`bash
 brew tap jordanterry/tap
 brew install french-property-investment
@@ -138,15 +137,35 @@ brew upgrade french-property-investment
 
 **Manual:**
 \`\`\`bash
-wget https://github.com/jordanterry/french-mortgage-cli/releases/download/v${NEW_VERSION}/french-property-investment.jar
-java -jar french-property-investment.jar --help
+wget https://github.com/jordanterry/french-mortgage-cli/archive/refs/tags/v${NEW_VERSION}.tar.gz
+tar -xzf v${NEW_VERSION}.tar.gz
+cd french-mortgage-cli-${NEW_VERSION}
+python3 python/src/french_mortgage.py --help
 \`\`\`
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)"
 echo "✓ GitHub release created"
 echo ""
 
-echo "Step 10: Updating Homebrew tap..."
+echo "Step 10: Calculating SHA256 of release tarball..."
+sleep 2
+TEMP_TAR=$(mktemp)
+curl -sL "$TARBALL_URL" -o "$TEMP_TAR"
+SHA256=$(shasum -a 256 "$TEMP_TAR" | awk '{print $1}')
+rm "$TEMP_TAR"
+echo "✓ SHA256: $SHA256"
+echo ""
+
+echo "Step 11: Updating formula with SHA256..."
+sed -i '' "s/sha256 \".*\"/sha256 \"${SHA256}\"/" "$FORMULA_FILE"
+git add "$FORMULA_FILE"
+git commit --amend --no-edit
+git push -f origin main
+git push -f origin "v${NEW_VERSION}"
+echo "✓ Formula updated with SHA256"
+echo ""
+
+echo "Step 12: Updating Homebrew tap..."
 TAP_DIR="../homebrew-tap"
 if [ ! -d "$TAP_DIR" ]; then
     echo "Warning: Homebrew tap directory not found at $TAP_DIR"

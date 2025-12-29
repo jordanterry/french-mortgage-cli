@@ -1,6 +1,6 @@
 # French Property Investment Analyzer
 
-A CLI tool for analyzing French rental property investments with comprehensive financial modeling.
+A Python CLI tool for analyzing French rental property investments with comprehensive financial modeling.
 
 ## Features
 
@@ -9,22 +9,36 @@ A CLI tool for analyzing French rental property investments with comprehensive f
 - **ROI Analysis**: Return on investment, cash-on-cash return, break-even analysis
 - **Equity Tracking**: Principal paydown and equity build-up over time
 - **Multiple Output Formats**: JSON for programmatic use, table for human reading
+- **Claude Code Skill**: Use conversationally with Claude for natural property analysis
 
 ## Installation
 
-### Build from Source
+### Homebrew (Recommended)
 
 ```bash
-cd cli-tools/french-property-investment
-./gradlew shadowJar
+brew tap jordanterry/tap
+brew install french-property-investment
 ```
 
-The executable JAR will be created at `build/libs/french-property-investment.jar`
+### Claude Code Skill
 
-### Run
+To use with Claude Code for conversational analysis:
 
 ```bash
-java -jar build/libs/french-property-investment.jar <options>
+./skills/install.sh
+```
+
+This installs the skill to `~/.claude/skills/french-property-investment/` so you can ask Claude questions like:
+> "Analyze a 300k EUR property in France with 60k down payment, 3.5% interest, 20-year mortgage, renting for 1500/month over 10 years"
+
+### Manual Installation
+
+```bash
+# Download the script
+wget https://raw.githubusercontent.com/jordanterry/french-mortgage-cli/main/python/src/french_mortgage.py
+
+# Run directly
+python3 french_mortgage.py <options>
 ```
 
 ## Usage
@@ -32,25 +46,37 @@ java -jar build/libs/french-property-investment.jar <options>
 ### Basic Example
 
 ```bash
-java -jar build/libs/french-property-investment.jar \
+french-property-investment \
   --property-price 300000 \
   --down-payment 60000 \
   --interest-rate 3.5 \
-  --loan-term 20 \
+  --loan-term-years 20 \
   --monthly-rent 1500 \
-  --holding-period 10
+  --holding-period-years 10
+```
+
+Or with Python directly:
+
+```bash
+python3 french_mortgage.py \
+  --property-price 300000 \
+  --down-payment 60000 \
+  --interest-rate 3.5 \
+  --loan-term-years 20 \
+  --monthly-rent 1500 \
+  --holding-period-years 10
 ```
 
 ### With All Parameters
 
 ```bash
-java -jar build/libs/french-property-investment.jar \
+french-property-investment \
   --property-price 300000 \
   --down-payment 60000 \
   --interest-rate 3.5 \
-  --loan-term 20 \
+  --loan-term-years 20 \
   --monthly-rent 1500 \
-  --holding-period 10 \
+  --holding-period-years 10 \
   --property-tax-annual 2400 \
   --hoa-monthly 150 \
   --maintenance-percent 1.0 \
@@ -76,7 +102,7 @@ echo '{
   "managementFeePercent": 8.0,
   "vacancyRate": 5.0,
   "rentIncreaseAnnual": 2.0
-}' | java -jar build/libs/french-property-investment.jar --json-input
+}' | french-property-investment --json-input
 ```
 
 ### Output Formats
@@ -100,9 +126,9 @@ Outputs human-readable formatted tables.
 - `--property-price`, `-p`: Property purchase price in EUR
 - `--down-payment`, `-d`: Down payment in EUR
 - `--interest-rate`, `-i`: Annual interest rate (%)
-- `--loan-term`, `-l`: Loan term in years
+- `--loan-term-years`, `-l`: Loan term in years
 - `--monthly-rent`, `-r`: Monthly rental income in EUR
-- `--holding-period`, `-h`: Investment holding period in years
+- `--holding-period-years`: Investment holding period in years
 
 ### Optional Parameters
 
@@ -157,11 +183,13 @@ For each year:
 
 ## Testing
 
-Run the test suite:
+Run the Python test suite:
 
 ```bash
-./gradlew test
+python3 python/tests/test_french_mortgage.py
 ```
+
+All 23 tests validate mortgage calculations, investment analysis, and input validation.
 
 ## Example Output
 

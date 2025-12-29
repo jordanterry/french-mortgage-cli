@@ -1,0 +1,224 @@
+{
+  "name": "french-property-investment",
+  "version": "2.0.0",
+  "description": "Analyze French rental property investments with comprehensive financial modeling including cash flow projections, ROI calculations, and break-even analysis. Includes French-specific costs like arrangement fees (1%), registration fees (1.5%), survey fees (€750), and mandatory life insurance (0.4% annually).",
+  "executable": {
+    "command": "python3",
+    "args": ["french_mortgage.py", "--json-input"],
+    "timeout": 10000
+  },
+  "input": {
+    "type": "json-stdin",
+    "schema": {
+      "type": "object",
+      "required": [
+        "propertyPrice",
+        "downPayment",
+        "interestRate",
+        "loanTermYears",
+        "monthlyRent",
+        "holdingPeriodYears"
+      ],
+      "properties": {
+        "propertyPrice": {
+          "type": "number",
+          "description": "Property purchase price in EUR",
+          "minimum": 0
+        },
+        "downPayment": {
+          "type": "number",
+          "description": "Down payment in EUR",
+          "minimum": 0
+        },
+        "interestRate": {
+          "type": "number",
+          "description": "Annual interest rate as percentage (e.g., 3.5 for 3.5%)",
+          "minimum": 0
+        },
+        "loanTermYears": {
+          "type": "integer",
+          "description": "Loan term in years",
+          "minimum": 1
+        },
+        "monthlyRent": {
+          "type": "number",
+          "description": "Monthly rental income in EUR",
+          "minimum": 0
+        },
+        "holdingPeriodYears": {
+          "type": "integer",
+          "description": "Investment holding period in years",
+          "minimum": 1
+        },
+        "propertyTaxAnnual": {
+          "type": "number",
+          "description": "Annual property tax in EUR (taxe foncière)",
+          "minimum": 0,
+          "default": 0
+        },
+        "hoaMonthly": {
+          "type": "number",
+          "description": "Monthly HOA/copropriété fees in EUR",
+          "minimum": 0,
+          "default": 0
+        },
+        "maintenancePercent": {
+          "type": "number",
+          "description": "Annual maintenance as percentage of property value",
+          "minimum": 0,
+          "default": 1.0
+        },
+        "managementFeePercent": {
+          "type": "number",
+          "description": "Property management fee as percentage of rent",
+          "minimum": 0,
+          "default": 0
+        },
+        "vacancyRate": {
+          "type": "number",
+          "description": "Expected vacancy rate as percentage",
+          "minimum": 0,
+          "maximum": 100,
+          "default": 0
+        },
+        "rentIncreaseAnnual": {
+          "type": "number",
+          "description": "Annual rent increase as percentage",
+          "default": 0
+        }
+      }
+    }
+  },
+  "output": {
+    "type": "json",
+    "schema": {
+      "type": "object",
+      "properties": {
+        "input": {
+          "type": "object",
+          "description": "Echo of input parameters"
+        },
+        "mortgage": {
+          "type": "object",
+          "properties": {
+            "monthlyPayment": {
+              "type": "number",
+              "description": "Monthly mortgage payment including life insurance"
+            },
+            "totalInterest": {
+              "type": "number",
+              "description": "Total interest paid over loan term"
+            },
+            "totalPayments": {
+              "type": "number",
+              "description": "Total amount paid over loan term"
+            }
+          }
+        },
+        "yearlyProjections": {
+          "type": "array",
+          "description": "Year-by-year projections for the holding period",
+          "items": {
+            "type": "object",
+            "properties": {
+              "year": {"type": "integer"},
+              "rentalIncome": {"type": "number"},
+              "expenses": {
+                "type": "object",
+                "properties": {
+                  "mortgage": {"type": "number"},
+                  "propertyTax": {"type": "number"},
+                  "hoa": {"type": "number"},
+                  "maintenance": {"type": "number"},
+                  "management": {"type": "number"},
+                  "insurance": {"type": "number"},
+                  "total": {"type": "number"}
+                }
+              },
+              "netCashFlow": {"type": "number"},
+              "cumulativeCashFlow": {"type": "number"},
+              "principalPaydown": {"type": "number"},
+              "totalEquity": {"type": "number"},
+              "remainingBalance": {"type": "number"}
+            }
+          }
+        },
+        "summary": {
+          "type": "object",
+          "properties": {
+            "initialInvestment": {
+              "type": "number",
+              "description": "Total upfront cost (down payment + fees)"
+            },
+            "loanAmount": {"type": "number"},
+            "totalRentalIncome": {"type": "number"},
+            "totalExpenses": {"type": "number"},
+            "totalCashFlow": {"type": "number"},
+            "totalPrincipalPaydown": {"type": "number"},
+            "finalEquity": {
+              "type": "number",
+              "description": "Total equity at end of holding period"
+            },
+            "netProfit": {"type": "number"},
+            "roi": {
+              "type": "number",
+              "description": "Return on investment as percentage"
+            },
+            "avgCashOnCashReturn": {
+              "type": "number",
+              "description": "Average annual cash-on-cash return as percentage"
+            },
+            "breakEvenYear": {
+              "type": ["integer", "null"],
+              "description": "Year when cumulative cash flow becomes positive, null if never"
+            }
+          }
+        }
+      }
+    }
+  },
+  "examples": [
+    {
+      "description": "Basic property analysis - 300k EUR property with 20% down",
+      "input": {
+        "propertyPrice": 300000,
+        "downPayment": 60000,
+        "interestRate": 3.5,
+        "loanTermYears": 20,
+        "monthlyRent": 1500,
+        "holdingPeriodYears": 10
+      }
+    },
+    {
+      "description": "Full analysis with expenses and vacancy",
+      "input": {
+        "propertyPrice": 300000,
+        "downPayment": 60000,
+        "interestRate": 3.5,
+        "loanTermYears": 20,
+        "monthlyRent": 1500,
+        "holdingPeriodYears": 10,
+        "propertyTaxAnnual": 2400,
+        "hoaMonthly": 150,
+        "maintenancePercent": 1.0,
+        "managementFeePercent": 8.0,
+        "vacancyRate": 5.0,
+        "rentIncreaseAnnual": 2.0
+      }
+    },
+    {
+      "description": "Smaller property - 200k EUR with 15-year mortgage",
+      "input": {
+        "propertyPrice": 200000,
+        "downPayment": 40000,
+        "interestRate": 3.0,
+        "loanTermYears": 15,
+        "monthlyRent": 1200,
+        "holdingPeriodYears": 15,
+        "propertyTaxAnnual": 1800,
+        "maintenancePercent": 1.5,
+        "vacancyRate": 3.0
+      }
+    }
+  ]
+}
